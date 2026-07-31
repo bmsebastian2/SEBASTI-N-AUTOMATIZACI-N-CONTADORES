@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Propuesta de automatización · Estudio contable</title>
+  <meta name="description"
+    content="Automatizaciones a medida para tu estudio contable: las facturas se cargan solas, los vencimientos se avisan a tiempo y los informes se generan sin cargar nada a mano.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --paper: #EDEFE8;
+      --paper-2: #E5E8DE;
+      --card: #F6F7F2;
+      --ink: #14332F;
+      --ink-soft: #3D5B56;
+      --rule: #CAD0C2;
+      --debit: #9E3B2C;
+      --credit: #2C6A4B;
+      --stamp: #A87A1E;
+
+      --f-display: 'Bricolage Grotesque', system-ui, sans-serif;
+      --f-body: 'Hanken Grotesk', system-ui, sans-serif;
+      --f-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+      --wrap: 1080px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%
+    }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--f-body);
+      font-size: 17px;
+      line-height: 1.6;
+      font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    ::selection {
+      background: var(--ink);
+      color: var(--paper)
+    }
+
+    .wrap {
+      max-width: var(--wrap);
+      margin: 0 auto;
+      padding: 0 28px
+    }
+
+    /* faint ledger grid, whole page, very subtle */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 35px, rgba(20, 51, 47, .035) 35px, rgba(20, 51, 47, .035) 36px);
+      background-attachment: fixed;
+    }
+
+    .wrap,
+    header,
+    section,
+    footer {
+      position: relative;
+      z-index: 1
+    }
+
+    .mono {
+      font-family: var(--f-mono);
+      font-weight: 500
+    }
+
+    .eyebrow {
+      font-family: var(--f-mono);
+      font-size: .72rem;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      font-weight: 500;
+    }
+
+    /* ---------- header ---------- */
+    .top {
+      padding: 26px 0 0
+    }
+
+    .top__row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 16px;
+      flex-wrap: wrap
+    }
+
+    .brand {
+      font-family: var(--f-mono);
+      font-weight: 600;
+      font-size: .82rem;
+      letter-spacing: .04em;
+      color: var(--ink)
+    }
+
+    .brand span {
+      color: var(--stamp)
+    }
+
+    /* ---------- hero ---------- */
+    .hero {
+      padding: clamp(24px, 4vw, 52px) 0 clamp(40px, 6vw, 72px)
+    }
+
+    .hero__eyebrow {
+      margin-bottom: 24px
+    }
+
+    .hero h1 {
+      font-family: var(--f-display);
+      font-weight: 800;
+      font-size: clamp(2.5rem, 6.4vw, 5.1rem);
+      line-height: .98;
+      letter-spacing: -.025em;
+      max-width: 16ch;
+    }
+
+    .hero h1 .gain {
+      color: var(--credit);
+      display: inline-block;
+      position: relative
+    }
+
+    .hero h1 .gain::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: .06em;
+      height: .09em;
+      background: var(--stamp);
+      border-radius: 2px;
+    }
+
+    .hero__lead {
+      margin-top: 28px;
+      max-width: 56ch;
+      font-size: clamp(1.05rem, 1.8vw, 1.28rem);
+      color: var(--ink-soft);
+      line-height: 1.55;
+    }
+
+    /* ---------- balance (signature) ---------- */
+    .balance {
+      margin-top: clamp(40px, 6vw, 64px);
+      background: var(--card);
+      border: 1.5px solid var(--ink);
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 6px 8px 0 rgba(20, 51, 47, .09);
+    }
+
+    .balance__head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 22px;
+      border-bottom: 1.5px solid var(--ink);
+      font-family: var(--f-mono);
+      font-size: .74rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink);
+      flex-wrap: wrap;
+    }
+
+    .balance__head .tag {
+      color: var(--ink-soft)
+    }
+
+    .cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr
+    }
+
+    .col {
+      padding: 22px
+    }
+
+    .col--debe {
+      border-right: 1.5px solid var(--ink)
+    }
+
+    .col__title {
+      font-family: var(--f-mono);
+      font-size: .74rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .col--debe .col__title {
+      color: var(--debit)
+    }
+
+    .col--haber .col__title {
+      color: var(--credit)
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%
+    }
+
+    .col--debe .dot {
+      background: var(--debit)
+    }
+
+    .col--haber .dot {
+      background: var(--credit)
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 14px;
+      padding: 9px 0;
+      border-bottom: 1px dotted var(--rule);
+    }
+
+    .row:last-of-type {
+      border-bottom: none
+    }
+
+    .row__label {
+      font-size: .98rem;
+      color: var(--ink)
+    }
+
+    .row__val {
+      font-family: var(--f-mono);
+      font-size: .9rem;
+      white-space: nowrap;
+      color: var(--ink-soft)
+    }
+
+    .col__sum {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 2px solid var(--ink);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .col__sum-label {
+      font-family: var(--f-mono);
+      font-size: .7rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--ink-soft)
+    }
+
+    .col__sum-val {
+      font-family: var(--f-mono);
+      font-weight: 600;
+      font-size: 1.5rem;
+      line-height: 1
+    }
+
+    .col--debe .col__sum-val {
+      color: var(--debit)
+    }
+
+    .col--haber .col__sum-val {
+      color: var(--credit)
+    }
+
+    .balance__result {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 22px;
+      background: var(--ink);
+      color: var(--paper);
+      flex-wrap: wrap;
+    }
+
+    .balance__result-main {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap
+    }
+
+    .balance__result-label {
+      font-family: var(--f-mono);
+      font-size: .72rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      opacity: .75
+    }
+
+    .balance__result-val {
+      font-family: var(--f-display);
+      font-weight: 700;
+      font-size: clamp(1.3rem, 2.4vw, 1.7rem);
+      color: #EBD9A8
+    }
+
+    .stamp {
+      font-family: var(--f-mono);
+      font-weight: 600;
+      font-size: .72rem;
+      letter-spacing: .2em;
+      color: #EBD9A8;
+      border: 1.5px solid #A87A1E;
+      border-radius: 3px;
+      padding: 6px 12px;
+      transform: rotate(-3deg);
+      white-space: nowrap;
+    }
+
+    .balance__note {
+      padding: 11px 22px;
+      font-family: var(--f-mono);
+      font-size: .72rem;
+      color: var(--ink-soft);
+      border-top: 1px solid var(--rule);
+    }
+
+    /* ---------- section shell ---------- */
+    .sec {
+      padding: clamp(52px, 8vw, 88px) 0
+    }
+
+    .sec__head {
+      max-width: 60ch;
+      margin-bottom: clamp(28px, 4vw, 44px)
+    }
+
+    .sec__head h2 {
+      font-family: var(--f-display);
+      font-weight: 700;
+      font-size: clamp(1.75rem, 3.6vw, 2.7rem);
+      line-height: 1.04;
+      letter-spacing: -.02em;
+      margin-top: 14px;
+    }
+
+    .sec__head p {
+      margin-top: 16px;
+      color: var(--ink-soft);
+      font-size: 1.08rem;
+      max-width: 52ch
+    }
+
+    /* ---------- catalog / line items ---------- */
+    .ledger {
+      border-top: 2px solid var(--ink)
+    }
+
+    .line {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 24px;
+      align-items: center;
+      padding: 22px 16px;
+      border-bottom: 1px solid var(--rule);
+      border-left: 3px solid transparent;
+      transition: background .18s ease, border-color .18s ease, padding-left .18s ease;
+    }
+
+    .line:hover {
+      background: var(--card);
+      border-left-color: var(--stamp);
+      padding-left: 22px
+    }
+
+    .line__trigger {
+      font-family: var(--f-mono);
+      font-size: .68rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      border: 1px solid var(--rule);
+      border-radius: 100px;
+      padding: 5px 11px;
+      white-space: nowrap;
+    }
+
+    .line__main {
+      min-width: 0
+    }
+
+    .line__name {
+      font-family: var(--f-display);
+      font-weight: 600;
+      font-size: 1.28rem;
+      letter-spacing: -.01em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .line__desc {
+      color: var(--ink-soft);
+      margin-top: 5px;
+      font-size: 1.01rem;
+      max-width: 60ch
+    }
+
+    .flag {
+      font-family: var(--f-mono);
+      font-size: .6rem;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--stamp);
+      border: 1px solid var(--stamp);
+      border-radius: 3px;
+      padding: 3px 7px;
+    }
+
+    .line__impact {
+      text-align: right;
+      white-space: nowrap
+    }
+
+    .line__impact-label {
+      display: block;
+      font-family: var(--f-mono);
+      font-size: .62rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--ink-soft)
+    }
+
+    .line__impact-val {
+      display: block;
+      font-family: var(--f-mono);
+      font-weight: 600;
+      font-size: .98rem;
+      color: var(--ink);
+      margin-top: 3px
+    }
+
+    /* ---------- how it works ---------- */
+    .band-soft {
+      background: var(--paper-2)
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      border: 1.5px solid var(--ink);
+      border-radius: 4px;
+      overflow: hidden;
+      background: var(--ink)
+    }
+
+    .step {
+      background: var(--card);
+      padding: 28px 24px
+    }
+
+    .step__num {
+      font-family: var(--f-mono);
+      font-weight: 600;
+      font-size: .8rem;
+      letter-spacing: .1em;
+      color: var(--stamp)
+    }
+
+    .step__arrow {
+      color: var(--ink-soft);
+      font-family: var(--f-mono)
+    }
+
+    .step h3 {
+      font-family: var(--f-display);
+      font-weight: 700;
+      font-size: 1.35rem;
+      margin: 14px 0 8px;
+      letter-spacing: -.01em
+    }
+
+    .step p {
+      color: var(--ink-soft);
+      font-size: 1.01rem
+    }
+
+    /* ---------- priority callout ---------- */
+    .start {
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: 6px;
+      padding: clamp(30px, 4vw, 44px);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    .start__mark {
+      font-family: var(--f-mono);
+      font-weight: 600;
+      font-size: .72rem;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: #EBD9A8;
+      border: 1.5px solid #A87A1E;
+      border-radius: 3px;
+      padding: 8px 12px;
+      white-space: nowrap;
+      height: fit-content;
+    }
+
+    .start h2 {
+      font-family: var(--f-display);
+      font-weight: 700;
+      font-size: clamp(1.5rem, 3vw, 2.1rem);
+      line-height: 1.08;
+      letter-spacing: -.015em
+    }
+
+    .start p {
+      margin-top: 14px;
+      color: #C6D3CD;
+      font-size: 1.08rem;
+      max-width: 58ch
+    }
+
+    .start__picks {
+      margin-top: 22px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap
+    }
+
+    .pick {
+      font-family: var(--f-mono);
+      font-size: .82rem;
+      color: var(--paper);
+      border: 1px solid #3D5B56;
+      border-radius: 100px;
+      padding: 8px 16px
+    }
+
+    .pick b {
+      color: #EBD9A8;
+      font-weight: 600
+    }
+
+    /* ---------- cta ---------- */
+    .cta {
+      text-align: left
+    }
+
+    .cta h2 {
+      font-family: var(--f-display);
+      font-weight: 800;
+      font-size: clamp(2rem, 4.6vw, 3.4rem);
+      line-height: 1;
+      letter-spacing: -.025em;
+      max-width: 18ch
+    }
+
+    .cta p {
+      margin-top: 20px;
+      color: var(--ink-soft);
+      font-size: 1.14rem;
+      max-width: 52ch
+    }
+
+    .cta__actions {
+      margin-top: 32px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap
+    }
+
+    .btn {
+      font-family: var(--f-body);
+      font-weight: 600;
+      font-size: 1.02rem;
+      text-decoration: none;
+      border-radius: 4px;
+      padding: 15px 26px;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      transition: transform .12s ease, box-shadow .12s ease, background .15s ease;
+    }
+
+    .btn--primary {
+      background: var(--ink);
+      color: var(--paper);
+      box-shadow: 4px 4px 0 rgba(20, 51, 47, .18)
+    }
+
+    .btn--primary:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 rgba(20, 51, 47, .22)
+    }
+
+    .btn--ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1.5px solid var(--ink)
+    }
+
+    .btn--ghost:hover {
+      background: var(--ink);
+      color: var(--paper)
+    }
+
+    .btn .ar {
+      font-family: var(--f-mono)
+    }
+
+    /* ---------- footer ---------- */
+    .foot {
+      border-top: 2px solid var(--ink);
+      padding: 34px 0 44px;
+      margin-top: clamp(40px, 6vw, 72px)
+    }
+
+    .foot__row {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: baseline
+    }
+
+    .foot__who {
+      font-family: var(--f-display);
+      font-weight: 700;
+      font-size: 1.05rem
+    }
+
+    .foot__meta {
+      font-family: var(--f-mono);
+      font-size: .76rem;
+      color: var(--ink-soft);
+      letter-spacing: .03em
+    }
+
+    /* ---------- reveal (content visible by default; animation opt-in) ---------- */
+    .rise {
+      opacity: 1;
+      transform: none
+    }
+
+    @media(prefers-reduced-motion:no-preference) {
+      .js .rise {
+        opacity: 0;
+        transform: translateY(18px)
+      }
+
+      .js .rise.in {
+        opacity: 1;
+        transform: none;
+        transition: opacity .7s cubic-bezier(.2, .7, .2, 1), transform .7s cubic-bezier(.2, .7, .2, 1)
+      }
+
+      .js .hero .rise {
+        animation: rise .8s cubic-bezier(.2, .7, .2, 1) forwards;
+        opacity: 0
+      }
+
+      .js .hero .d1 {
+        animation-delay: .05s
+      }
+
+      .js .hero .d2 {
+        animation-delay: .16s
+      }
+
+      .js .hero .d3 {
+        animation-delay: .28s
+      }
+
+      .js .hero .d4 {
+        animation-delay: .42s
+      }
+    }
+
+    @keyframes rise {
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    a:focus-visible,
+    .btn:focus-visible {
+      outline: 3px solid var(--stamp);
+      outline-offset: 3px;
+      border-radius: 4px
+    }
+
+    /* ---------- responsive ---------- */
+    @media(max-width:720px) {
+      body {
+        font-size: 16px
+      }
+
+      .cols {
+        grid-template-columns: 1fr
+      }
+
+      .col--debe {
+        border-right: none;
+        border-bottom: 1.5px solid var(--ink)
+      }
+
+      .steps {
+        grid-template-columns: 1fr
+      }
+
+      .line {
+        grid-template-columns: 1fr auto;
+        gap: 10px 16px
+      }
+
+      .line__trigger {
+        grid-column: 1;
+        grid-row: 1;
+        justify-self: start
+      }
+
+      .line__impact {
+        grid-column: 2;
+        grid-row: 1;
+        text-align: right
+      }
+
+      .line__main {
+        grid-column: 1 / -1;
+        grid-row: 2
+      }
+
+      .line:hover {
+        padding-left: 16px
+      }
+
+      .start {
+        grid-template-columns: 1fr;
+        gap: 18px
+      }
+
+      .foot__row {
+        flex-direction: column;
+        gap: 8px
+      }
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+      * {
+        animation: none !important;
+        transition: none !important
+      }
+
+      .rise {
+        opacity: 1;
+        transform: none
+      }
+    }
+  </style>
+  <script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+
+  <header class="top">
+    <div class="wrap">
+      <div class="top__row">
+        <div class="brand">SEBASTIÁN<span>·</span>AUTOMATIZACIÓN + IA</div>
+        <div class="eyebrow">Propuesta para tu estudio</div>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero__eyebrow eyebrow rise d1">Automatización de tareas contables</div>
+      <h1 class="rise d2">Menos horas cargando datos. <span class="gain">Más tiempo para asesorar.</span></h1>
+      <p class="hero__lead rise d3">Un conjunto de automatizaciones hechas a la medida de tu operativa: las facturas se
+        cargan solas, los vencimientos de DGI y BPS se avisan a tiempo, y los clientes mandan lo que falta sin que se lo
+        pidas dos veces.</p>
+
+      <div class="balance rise d4">
+        <div class="balance__head">
+          <span>Un mes cualquiera, conciliado</span>
+          <span class="tag">Ejemplo ilustrativo</span>
+        </div>
+        <div class="cols">
+          <div class="col col--debe">
+            <div class="col__title"><span class="dot"></span>Debe · cómo es hoy</div>
+            <div class="row"><span class="row__label">Cargar facturas y tickets a mano</span><span class="row__val">~6
+                hs</span></div>
+            <div class="row"><span class="row__label">Perseguir comprobantes que faltan</span><span class="row__val">~3
+                hs</span></div>
+            <div class="row"><span class="row__label">Estar atento a cada vencimiento</span><span
+                class="row__val">riesgo</span></div>
+            <div class="row"><span class="row__label">Armar los informes del mes</span><span class="row__val">~4
+                hs</span></div>
+            <div class="col__sum"><span class="col__sum-label">Total</span><span class="col__sum-val">~13 hs</span>
+            </div>
+          </div>
+          <div class="col col--haber">
+            <div class="col__title"><span class="dot"></span>Haber · con las automatizaciones</div>
+            <div class="row"><span class="row__label">Se cargan solas al llegar</span><span
+                class="row__val">minutos</span></div>
+            <div class="row"><span class="row__label">El sistema los pide solo</span><span class="row__val">0 hs</span>
+            </div>
+            <div class="row"><span class="row__label">Aviso automático anticipado</span><span class="row__val">a
+                tiempo</span></div>
+            <div class="row"><span class="row__label">Se generan y se envían solos</span><span class="row__val">0
+                hs</span></div>
+            <div class="col__sum"><span class="col__sum-label">Supervisión</span><span class="col__sum-val">~2 hs</span>
+            </div>
+          </div>
+        </div>
+        <div class="balance__result">
+          <div class="balance__result-main">
+            <span class="balance__result-label">Saldo a tu favor</span>
+            <span class="balance__result-val">~11 horas cada mes</span>
+          </div>
+          <div class="stamp">CONCILIADO</div>
+        </div>
+        <div class="balance__note">Cifras de ejemplo — las ajustamos a tu operativa real en la primera reunión.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap">
+      <div class="sec__head rise">
+        <div class="eyebrow">Catálogo</div>
+        <h2>Qué se puede automatizar</h2>
+        <p>Cada línea funciona por su cuenta. Empezamos por las que te dan más aire y sumamos el resto a tu ritmo.</p>
+      </div>
+
+      <div class="ledger">
+        <div class="line rise">
+          <span class="line__trigger">Telegram / Email</span>
+          <div class="line__main">
+            <div class="line__name">Captura de facturas y tickets <span class="flag">Empezar acá</span></div>
+            <p class="line__desc">El cliente manda el comprobante y la IA extrae RUT, fecha, importe e IVA, y lo deja
+              cargado en tu planilla.</p>
+          </div>
+          <div class="line__impact"><span class="line__impact-label">Impacto</span><span
+              class="line__impact-val">Alto</span></div>
+        </div>
+
+        <div class="line rise">
+          <span class="line__trigger">Calendario fiscal</span>
+          <div class="line__main">
+            <div class="line__name">Recordatorios de DGI y BPS <span class="flag">Empezar acá</span></div>
+            <p class="line__desc">Cada obligación por cliente con su aviso automático antes del vencimiento. Se acaban
+              las multas por olvido.</p>
+          </div>
+          <div class="line__impact"><span class="line__impact-label">Impacto</span><span
+              class="line__impact-val">Alto</span></div>
+        </div>
+
+        <div class="line rise">
+          <span class="line__trigger">Vencimiento de factura</span>
+          <div class="line__main">
+            <div class="line__name">Cobranzas automáticas</div>
+            <p class="line__desc">Recordatorios de pago a los clientes según el vencimiento, con el tono que definas.
+              Cobrás antes y sin perseguir.</p>
+          </div>
+          <div class="line__impact"><span class="line__impact-label">Impacto</span><span
+              class="line__impact-val">Medio</span></div>
+        </div>
+
+        <div class="line rise">
+          <span class="line__trigger">Estado de cuenta</span>
+          <div class="line__main">
+            <div class="line__name">Conciliación bancaria</div>
+            <p class="line__desc">La IA categoriza cada movimiento del banco y lo cruza con lo registrado. El cierre
+              pasa de horas a minutos.</p>
+          </div>
+          <div class="line__impact"><span class="line__impact-label">Impacto</span><span
+              class="line__impact-val">Medio</span></div>
+        </div>
+
+        <div class="line rise">
+          <span class="line__trigger">Formulario de alta</span>
+          <div class="line__main">
+            <div class="line__name">Alta de clientes nuevos</div>
+            <p class="line__desc">El cliente completa un formulario y se crea su carpeta, se lo agrega a tu planilla y
+              recibe qué documentación mandar.</p>
+          </div>
+          <div class="line__impact"><span class="line__impact-label">Impacto</span><span
+              class="line__impact-val">Medio</span></div>
+        </div>
+
+        <div class="line rise">
+          <span class="line__trigger">Fin de mes</span>
+          <div class="line__main">
+            <div class="line__name">Reporte mensual por cliente</div>
+            <p class="line__desc">Un resumen claro de cada cliente, generado y enviado solo. Vos revisás, no lo armás
+              desde cero.</p>
+          </div>
+          <div class="line__impact"><span class="line__impact-label">Impacto</span><span
+              class="line__impact-val">Medio</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec band-soft">
+    <div class="wrap">
+      <div class="sec__head rise">
+        <div class="eyebrow">Cómo funciona</div>
+        <h2>Siempre el mismo camino, sin cargar nada a mano</h2>
+      </div>
+      <div class="steps rise">
+        <div class="step">
+          <div class="step__num">01</div>
+          <h3>Llega el dato</h3>
+          <p>Una factura por Email, un movimiento en el banco o un formulario completado.</p>
+        </div>
+        <div class="step">
+          <div class="step__num">02 <span class="step__arrow">→</span></div>
+          <h3>La IA lo procesa</h3>
+          <p>Lee, extrae lo que importa (RUT, fecha, importe, IVA) y lo ordena como corresponde.</p>
+        </div>
+        <div class="step">
+          <div class="step__num">03 <span class="step__arrow">→</span></div>
+          <h3>Aparece el resultado</h3>
+          <p>En tu planilla, tu carpeta de Drive o el aviso que necesitabas. Listo para revisar.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="wrap">
+      <div class="start rise">
+        <div class="start__mark">Plan sugerido</div>
+        <div>
+          <h2>Por dónde empezamos</h2>
+          <p>Arrancamos con las dos de mayor impacto y menor complejidad. En pocos días las ves funcionando con tus
+            propios datos, y desde ahí decidimos qué sumar.</p>
+          <div class="start__picks">
+            <span class="pick"><b>01</b> · Captura de facturas</span>
+            <span class="pick"><b>02</b> · Recordatorios DGI / BPS</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec cta">
+    <div class="wrap">
+      <div class="rise">
+        <div class="eyebrow">Siguiente paso</div>
+        <h2 style="margin-top:14px">Agendemos 20 minutos.</h2>
+        <p>Te muestro una automatización funcionando con un caso real tuyo y definimos juntos cuáles tienen más sentido
+          para tu estudio.</p>
+        <div class="cta__actions">
+          <a class="btn btn--primary"
+            href="mailto:tucorreo@ejemplo.com?subject=Automatización%20para%20mi%20estudio">Escribime <span
+              class="ar">→</span></a>
+          <a class="btn btn--ghost" href="https://wa.me/598XXXXXXXX" target="_blank" rel="noopener">WhatsApp</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="wrap">
+      <div class="foot__row">
+        <div class="foot__who">Sebastián</div>
+        <div class="foot__meta">Desarrollo y automatización con n8n + IA · Uruguay</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: .14, rootMargin: '0px 0px -8% 0px' });
+    document.querySelectorAll('.sec .rise, .foot .rise').forEach(el => io.observe(el));
+  </script>
+
+</body>
+</html>
